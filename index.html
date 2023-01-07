@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Survey Editor</title>
+    <script src="assets/js/vue.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body,
+        #app {
+            height: 100%;
+            width: 100%;
+            min-width: 100%;
+            min-height: 100%;
+            background-color: transparent;
+            background-color: #0f172a;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app" v-cloak class="flex flex-col items-center w-full text-slate-300">
+        <div class="flex flex-col items-center text-sm mb-4">
+            <template v-for="(questionnaire,index) in questionnaires">
+                <div class="flex flex-col mt-[50px]">
+                    <div>
+                        Cuestionario: {{questionnaire.title}}
+                    </div>
+                </div>
+                <div class="grid grid-cols-9 gap-2 max-w-[900px]">
+                    <div class="col-span-1">Número</div>
+                    <div class="col-span-3">Pregunta</div>
+                    <div class="col-span-1">Requerida</div>
+                    <div class="col-span-1">Mantener</div>
+                    <div class="col-span-1">Revisión</div>
+                    <div class="col-span-2">Condiciones</div>
+                    <template v-for="(question,q_index) in questionnaire.questions">
+                        <div class="col-span-1">
+                            {{q_index+1.}}
+                        </div>
+                        <div class="col-span-3">
+                            {{question.content}}
+                        </div>
+                        <div class="col-span-1 text-red-500">
+                            {{question.required?'*':''}}
+                        </div>
+                        <div class="col-span-1 flex">
+                            <input class="w-[20px] h-[20px] accent-green-500" type="checkbox" v-model="question.keep">
+                        </div>
+                        <div class="col-span-1 flex">
+                            <input class="w-[20px] h-[20px] accent-red-500" type="checkbox"
+                                v-model="question.revised_keep">
+                        </div>
+                        <div class="col-span-2 flex flex-col">
+                            <div class="flex w-fit p-1 text-sky-500 cursor-pointer  text-center mb-2"
+                                @click="showConditions(index,q_index,question.show_conditions)"
+                                v-if="question.connections.length>0">
+                                {{question.show_conditions?'Ocultar condiciones':'Mostrar condiciones'}}
+                            </div>
+                            <template v-if="question.show_conditions">
+                                <template v-for="condition in question.connections">
+                                    <div class="p-2 text-center text-slate-200">
+                                        <div class="grid grid-cols-5 gap-2 w-full">
+                                            <div class="col-span-2 flex min-w-[200px]">
+                                                Pregunta {{ getQuestionNumber(condition.question_id) + 1 }}
+                                            </div>
+                                            <div class="col-span-1 flex">
+                                                ->
+                                            </div>
+                                            <div class="col-span-2 flex">
+                                                Respuesta {{ getAnswer(condition.question_id, condition.answer_id)
+                                                }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </template>
+                        </div>
+
+                        <template v-if="question.answers.length>0">
+                            <div class="col-span-9 flex flex-col items-start text-xs">
+                                <div class="w-full flex justify-center">
+                                    <div class="flex w-fit p-1 rounded-full border-dashed border-2 cursor-pointer border-green-500 text-center mb-2"
+                                        @click="showAnswers(index,q_index,question.show)">
+                                        {{question.show?'Ocultar Respuestas':'Mostrar Respuestas'}}
+                                    </div>
+
+                                </div>
+                                <template v-if="question.show">
+                                    <template v-for="answer in question.answers">
+                                        <div
+                                            class="p-2 border-dashed border-2 border-sky-500 rounded-full ml-[100px] min-w-[200px] text-center">
+                                            {{answer.content}}
+                                        </div>
+                                    </template>
+                                </template>
+                            </div>
+                        </template>
+
+                    </template>
+                </div>
+            </template>
+        </div>
+        <div class="w-full flex justify-center mb-[70px]">
+            <div class="border-2 border-2 border-sky-500 text-slate-300 hover:bg-sky-500 rounded-full p-2"
+                @click="saveFile()">
+                Guardar
+            </div>
+        </div>
+    </div>
+</body>
+<script type="module">
+
+    new Vue({
+        el: '#app',
+        data() {
+            return {
+                questionnaires: [
+                    {
+                        "id": 4,
+                        "title": "Cuestionario de Información",
+                        "order": 2,
+                        "questions": [
+                            {
+                                "id": 79,
+                                "keep": true,
+                                "show_conditions": false,
+                                "show": true,
+                                "content": "Has sido referido por alguna persona",
+                                "order": 1,
+                                "page": 1,
+                                "type": "selection",
+                                "required": false,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 200, "content": "Si", "order": 1 },
+                                    { "id": 201, "content": "No", "order": 2 }
+                                ],
+                                "connections": [],
+                                "info_type": 2,
+                                "revised_keep": false
+                            },
+                            {
+                                "id": 80,
+                                "keep": false,
+                                "show_conditions": true,
+                                "show": false,
+                                "content": "Ingresa el Código de referido",
+                                "order": 2,
+                                "page": 2,
+                                "type": "referrals_code",
+                                "required": true,
+                                "min": 12,
+                                "max": 12,
+                                "answers": [],
+                                "connections": [
+                                    {
+                                        "id": 2795,
+                                        "question_id": 79,
+                                        "answer_id": 200,
+                                        "next_question_id": 80
+                                    }
+                                ],
+                                "info_type": 2,
+                                "revised_keep": true
+                            },
+                            {
+                                "id": 45,
+                                "keep": false,
+                                "show_conditions": false,
+                                "show": false,
+                                "content": "Ingresa tu correo electrónico",
+                                "order": 3,
+                                "page": 3,
+                                "type": "email",
+                                "required": true,
+                                "min": 4,
+                                "max": 255,
+                                "answers": [],
+                                "connections": [],
+                                "info_type": 2,
+                                "revised_keep": true
+                            },
+                            {
+                                "id": 46,
+                                "keep": true,
+                                "show_conditions": false,
+                                "show": false,
+                                "content": "Ingresa tu número de WhatsApp",
+                                "order": 4,
+                                "page": 4,
+                                "type": "phone",
+                                "required": true,
+                                "min": null,
+                                "max": null,
+                                "answers": [],
+                                "connections": [],
+                                "info_type": 2,
+                                "revised_keep": true
+                            },
+                            {
+                                "id": 47,
+                                "keep": false,
+                                "show_conditions": false,
+                                "show": true,
+                                "content": "¿Cuál es tu nivel más alto de estudio?",
+                                "order": 5,
+                                "page": 5,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 92, "content": "Ninguno", "order": 1 },
+                                    { "id": 93, "content": "Primaria", "order": 2 },
+                                    { "id": 94, "content": "Bachillerato", "order": 3 },
+                                    { "id": 95, "content": "Técnico", "order": 4 },
+                                    { "id": 96, "content": "Universitario", "order": 5 }
+                                ],
+                                "connections": [],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 48,
+                                "keep": true,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "¿Cuál de las siguientes opciones describe mejor tu situación laboral?",
+                                "order": 6,
+                                "page": 6,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 97, "content": "Soy empleado", "order": 1 },
+                                    { "id": 98, "content": "Soy trabajador independiente", "order": 2 },
+                                    {
+                                        "id": 99,
+                                        "content": "Soy dueño de un negocio o me dedico a la venta informal",
+                                        "order": 3
+                                    },
+                                    { "id": 100, "content": "Actualmente no tengo empleo", "order": 4 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2796,
+                                        "question_id": 47,
+                                        "answer_id": 92,
+                                        "next_question_id": 48
+                                    },
+                                    {
+                                        "id": 2797,
+                                        "question_id": 47,
+                                        "answer_id": 93,
+                                        "next_question_id": 48
+                                    },
+                                    {
+                                        "id": 2798,
+                                        "question_id": 47,
+                                        "answer_id": 94,
+                                        "next_question_id": 48
+                                    },
+                                    {
+                                        "id": 2799,
+                                        "question_id": 47,
+                                        "answer_id": 95,
+                                        "next_question_id": 48
+                                    },
+                                    {
+                                        "id": 2800,
+                                        "question_id": 47,
+                                        "answer_id": 96,
+                                        "next_question_id": 48
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 49,
+                                "keep": true,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "¿Para cuál sector trabajas?",
+                                "order": 7,
+                                "page": 7,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 101, "content": "Público", "order": 1 },
+                                    { "id": 102, "content": "Privado", "order": 2 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2801,
+                                        "question_id": 48,
+                                        "answer_id": 97,
+                                        "next_question_id": 49
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 50,
+                                "keep": false,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "¿En qué tipo de institución trabajas?",
+                                "order": 8,
+                                "page": 8,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 103, "content": "Administración Pública", "order": 1 },
+                                    {
+                                        "id": 104,
+                                        "content": "Instituciones Descentralizadas",
+                                        "order": 2
+                                    },
+                                    {
+                                        "id": 105,
+                                        "content": "Instituciones de Seguridad Social",
+                                        "order": 3
+                                    },
+                                    { "id": 106, "content": "Empresas no Financieras", "order": 4 },
+                                    { "id": 107, "content": "Empresas Financieras", "order": 5 },
+                                    {
+                                        "id": 108,
+                                        "content": "Gobiernos Locales (Municipalidades)",
+                                        "order": 6
+                                    }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2802,
+                                        "question_id": 49,
+                                        "answer_id": 101,
+                                        "next_question_id": 50
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 51,
+                                "keep": true,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "¿En qué industria trabajas?",
+                                "order": 9,
+                                "page": 9,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    {
+                                        "id": 109,
+                                        "content": "Agricultura, caza, silvicultura, pesca",
+                                        "order": 1
+                                    },
+                                    {
+                                        "id": 110,
+                                        "content": "Industrias manufactureras, Explotación de minas y canteras y otras actividades Industriales",
+                                        "order": 2
+                                    },
+                                    { "id": 111, "content": "Construcción", "order": 3 },
+                                    {
+                                        "id": 112,
+                                        "content": "Comercio, restaurante y hoteles, Transporte y almacenamiento, Actividades de alojamiento y Servicios de Comida",
+                                        "order": 4
+                                    },
+                                    { "id": 113, "content": "Información y Comunicaciones", "order": 5 },
+                                    {
+                                        "id": 114,
+                                        "content": "Actividades Financieras y de Seguros",
+                                        "order": 6
+                                    },
+                                    { "id": 115, "content": "Actividades Inmobiliarias", "order": 7 },
+                                    {
+                                        "id": 116,
+                                        "content": "Actividades Profesionales, Científicas, Técnicas y de Servicios Admon. de Apoyo",
+                                        "order": 8
+                                    },
+                                    { "id": 117, "content": "Servicios", "order": 9 },
+                                    { "id": 118, "content": "Servicio Doméstico", "order": 10 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2803,
+                                        "question_id": 49,
+                                        "answer_id": 102,
+                                        "next_question_id": 51
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 52,
+                                "keep": false,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "¿Hace cuánto tiempo llevas en este empleo?",
+                                "order": 10,
+                                "page": 10,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 119, "content": "Menos de 6 meses", "order": 1 },
+                                    { "id": 120, "content": "6-24 meses", "order": 2 },
+                                    { "id": 121, "content": "Más de 24 meses", "order": 3 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2804,
+                                        "question_id": 50,
+                                        "answer_id": 103,
+                                        "next_question_id": 52
+                                    },
+                                    {
+                                        "id": 2805,
+                                        "question_id": 50,
+                                        "answer_id": 104,
+                                        "next_question_id": 52
+                                    },
+                                    {
+                                        "id": 2806,
+                                        "question_id": 50,
+                                        "answer_id": 105,
+                                        "next_question_id": 52
+                                    },
+                                    {
+                                        "id": 2807,
+                                        "question_id": 50,
+                                        "answer_id": 106,
+                                        "next_question_id": 52
+                                    },
+                                    {
+                                        "id": 2808,
+                                        "question_id": 50,
+                                        "answer_id": 107,
+                                        "next_question_id": 52
+                                    },
+                                    {
+                                        "id": 2809,
+                                        "question_id": 50,
+                                        "answer_id": 108,
+                                        "next_question_id": 52
+                                    },
+                                    {
+                                        "id": 2810,
+                                        "question_id": 51,
+                                        "answer_id": 109,
+                                        "next_question_id": 52
+                                    },
+                                    {
+                                        "id": 2811,
+                                        "question_id": 51,
+                                        "answer_id": 110,
+                                        "next_question_id": 52
+                                    },
+                                    {
+                                        "id": 2812,
+                                        "question_id": 51,
+                                        "answer_id": 111,
+                                        "next_question_id": 52
+                                    },
+                                    {
+                                        "id": 2813,
+                                        "question_id": 51,
+                                        "answer_id": 112,
+                                        "next_question_id": 52
+                                    },
+                                    {
+                                        "id": 2814,
+                                        "question_id": 51,
+                                        "answer_id": 113,
+                                        "next_question_id": 52
+                                    },
+                                    {
+                                        "id": 2815,
+                                        "question_id": 51,
+                                        "answer_id": 114,
+                                        "next_question_id": 52
+                                    },
+                                    {
+                                        "id": 2816,
+                                        "question_id": 51,
+                                        "answer_id": 115,
+                                        "next_question_id": 52
+                                    },
+                                    {
+                                        "id": 2817,
+                                        "question_id": 51,
+                                        "answer_id": 116,
+                                        "next_question_id": 52
+                                    },
+                                    {
+                                        "id": 2818,
+                                        "question_id": 51,
+                                        "answer_id": 117,
+                                        "next_question_id": 52
+                                    },
+                                    {
+                                        "id": 2819,
+                                        "question_id": 51,
+                                        "answer_id": 118,
+                                        "next_question_id": 52
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 55,
+                                "keep": true,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "Indica el rubro al que te dedicas",
+                                "order": 11,
+                                "page": 11,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 124, "content": "Compraventa", "order": 1 },
+                                    {
+                                        "id": 125,
+                                        "content": "Servicios profesionales (Consultorias, tutorías, etc..)",
+                                        "order": 2
+                                    },
+                                    { "id": 126, "content": "Agropecuario (sector rural)", "order": 3 },
+                                    {
+                                        "id": 127,
+                                        "content": "Transporte (Bus, camión, taxi, uber, etc...)",
+                                        "order": 4
+                                    },
+                                    {
+                                        "id": 128,
+                                        "content": "Repartidor de comida (Uber eats, Hugo, PedidosYA, etc...)",
+                                        "order": 5
+                                    },
+                                    {
+                                        "id": 129,
+                                        "content": "Belleza (estilistas, salón de bellezas, spa, manicurista/pedicurista)",
+                                        "order": 6
+                                    },
+                                    { "id": 130, "content": "Servicio Doméstico", "order": 7 },
+                                    { "id": 139, "content": "Otro", "order": 8 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2820,
+                                        "question_id": 48,
+                                        "answer_id": 98,
+                                        "next_question_id": 55
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 56,
+                                "keep": false,
+                                "show_conditions": true,
+                                "show": false,
+                                "content": "Otro",
+                                "order": 12,
+                                "page": 12,
+                                "type": "single_text",
+                                "required": true,
+                                "min": 4,
+                                "max": 255,
+                                "answers": [],
+                                "connections": [
+                                    {
+                                        "id": 2821,
+                                        "question_id": 55,
+                                        "answer_id": 139,
+                                        "next_question_id": 56
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 58,
+                                "keep": false,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "Indica el rubro al que te dedicas",
+                                "order": 13,
+                                "page": 13,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 132, "content": "Servicios profesionales", "order": 1 },
+                                    {
+                                        "id": 133,
+                                        "content": "Agropecuario (cultivos y crías de animales)",
+                                        "order": 2
+                                    },
+                                    { "id": 134, "content": "Alimentos y bebidas", "order": 3 },
+                                    { "id": 135, "content": "Productos para el hogar", "order": 4 },
+                                    {
+                                        "id": 136,
+                                        "content": "Productos textiles (prendas de vestir y calzado)",
+                                        "order": 5
+                                    },
+                                    {
+                                        "id": 137,
+                                        "content": "Artículos elaborados con madera, hierro, etc..",
+                                        "order": 6
+                                    },
+                                    { "id": 138, "content": "Máquinas y aparatos eléctricos", "order": 7 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2822,
+                                        "question_id": 48,
+                                        "answer_id": 99,
+                                        "next_question_id": 58
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 59,
+                                "keep": true,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "Indica lo que aplica contigo",
+                                "order": 14,
+                                "page": 14,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 140, "content": "Soy estudiante", "order": 1 },
+                                    { "id": 141, "content": "Me dedico al hogar", "order": 2 },
+                                    { "id": 142, "content": "Recibo pensión", "order": 3 },
+                                    { "id": 143, "content": "Recibo remesas", "order": 4 },
+                                    { "id": 144, "content": "Otro", "order": 5 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2823,
+                                        "question_id": 48,
+                                        "answer_id": 100,
+                                        "next_question_id": 59
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 60,
+                                "keep": false,
+                                "show_conditions": true,
+                                "show": false,
+                                "content": "Otro",
+                                "order": 15,
+                                "page": 15,
+                                "type": "single_text",
+                                "required": true,
+                                "min": 4,
+                                "max": 255,
+                                "answers": [],
+                                "connections": [
+                                    {
+                                        "id": 2824,
+                                        "question_id": 59,
+                                        "answer_id": 144,
+                                        "next_question_id": 60
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 61,
+                                "keep": true,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "¿Estás recibiendo ingresos actualmente?",
+                                "order": 16,
+                                "page": 16,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 145, "content": "Si", "order": 1 },
+                                    { "id": 146, "content": "No", "order": 2 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2825,
+                                        "question_id": 59,
+                                        "answer_id": 140,
+                                        "next_question_id": 61
+                                    },
+                                    {
+                                        "id": 2826,
+                                        "question_id": 59,
+                                        "answer_id": 141,
+                                        "next_question_id": 61
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 62,
+                                "keep": true,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "¿Desde cuándo tienes esta fuente de ingresos?",
+                                "order": 17,
+                                "page": 17,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 147, "content": "Menos de 6 meses", "order": 1 },
+                                    { "id": 148, "content": "6-24 meses", "order": 2 },
+                                    { "id": 149, "content": "Más de 24 meses", "order": 3 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2827,
+                                        "question_id": 59,
+                                        "answer_id": 142,
+                                        "next_question_id": 62
+                                    },
+                                    {
+                                        "id": 2828,
+                                        "question_id": 59,
+                                        "answer_id": 143,
+                                        "next_question_id": 62
+                                    },
+                                    {
+                                        "id": 2829,
+                                        "question_id": 59,
+                                        "answer_id": 144,
+                                        "next_question_id": 62
+                                    },
+                                    {
+                                        "id": 2830,
+                                        "question_id": 61,
+                                        "answer_id": 145,
+                                        "next_question_id": 62
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 63,
+                                "keep": true,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "¿Con qué frecuencia recibes ingresos?",
+                                "order": 18,
+                                "page": 18,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 150, "content": "Diario", "order": 1 },
+                                    { "id": 151, "content": "Semanal", "order": 2 },
+                                    { "id": 152, "content": "Quincenal", "order": 3 },
+                                    { "id": 153, "content": "Mensual", "order": 4 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2831,
+                                        "question_id": 62,
+                                        "answer_id": 147,
+                                        "next_question_id": 63
+                                    },
+                                    {
+                                        "id": 2832,
+                                        "question_id": 62,
+                                        "answer_id": 148,
+                                        "next_question_id": 63
+                                    },
+                                    {
+                                        "id": 2833,
+                                        "question_id": 62,
+                                        "answer_id": 149,
+                                        "next_question_id": 63
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 64,
+                                "keep": false,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "¿Con qué frecuencia recibes ingresos?",
+                                "order": 19,
+                                "page": 19,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 154, "content": "Diario", "order": 1 },
+                                    { "id": 155, "content": "Semanal", "order": 2 },
+                                    { "id": 156, "content": "Quincenal", "order": 3 },
+                                    { "id": 157, "content": "Mensual", "order": 4 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2834,
+                                        "question_id": 54,
+                                        "answer_id": 122,
+                                        "next_question_id": 64
+                                    },
+                                    {
+                                        "id": 2835,
+                                        "question_id": 54,
+                                        "answer_id": 123,
+                                        "next_question_id": 64
+                                    },
+                                    {
+                                        "id": 2836,
+                                        "question_id": 55,
+                                        "answer_id": 124,
+                                        "next_question_id": 64
+                                    },
+                                    {
+                                        "id": 2837,
+                                        "question_id": 55,
+                                        "answer_id": 125,
+                                        "next_question_id": 64
+                                    },
+                                    {
+                                        "id": 2838,
+                                        "question_id": 55,
+                                        "answer_id": 126,
+                                        "next_question_id": 64
+                                    },
+                                    {
+                                        "id": 2839,
+                                        "question_id": 55,
+                                        "answer_id": 127,
+                                        "next_question_id": 64
+                                    },
+                                    {
+                                        "id": 2840,
+                                        "question_id": 55,
+                                        "answer_id": 128,
+                                        "next_question_id": 64
+                                    },
+                                    {
+                                        "id": 2841,
+                                        "question_id": 55,
+                                        "answer_id": 129,
+                                        "next_question_id": 64
+                                    },
+                                    {
+                                        "id": 2842,
+                                        "question_id": 55,
+                                        "answer_id": 130,
+                                        "next_question_id": 64
+                                    },
+                                    {
+                                        "id": 2843,
+                                        "question_id": 55,
+                                        "answer_id": 139,
+                                        "next_question_id": 64
+                                    },
+                                    {
+                                        "id": 2844,
+                                        "question_id": 58,
+                                        "answer_id": 132,
+                                        "next_question_id": 64
+                                    },
+                                    {
+                                        "id": 2845,
+                                        "question_id": 58,
+                                        "answer_id": 133,
+                                        "next_question_id": 64
+                                    },
+                                    {
+                                        "id": 2846,
+                                        "question_id": 58,
+                                        "answer_id": 134,
+                                        "next_question_id": 64
+                                    },
+                                    {
+                                        "id": 2847,
+                                        "question_id": 58,
+                                        "answer_id": 135,
+                                        "next_question_id": 64
+                                    },
+                                    {
+                                        "id": 2848,
+                                        "question_id": 58,
+                                        "answer_id": 136,
+                                        "next_question_id": 64
+                                    },
+                                    {
+                                        "id": 2849,
+                                        "question_id": 58,
+                                        "answer_id": 137,
+                                        "next_question_id": 64
+                                    },
+                                    {
+                                        "id": 2850,
+                                        "question_id": 58,
+                                        "answer_id": 138,
+                                        "next_question_id": 64
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 65,
+                                "keep": true,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "¿Tienes una fuente de ingreso diferente?",
+                                "order": 20,
+                                "page": 20,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 158, "content": "Si", "order": 1 },
+                                    { "id": 159, "content": "No", "order": 2 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2851,
+                                        "question_id": 64,
+                                        "answer_id": 154,
+                                        "next_question_id": 65
+                                    },
+                                    {
+                                        "id": 2852,
+                                        "question_id": 64,
+                                        "answer_id": 155,
+                                        "next_question_id": 65
+                                    },
+                                    {
+                                        "id": 2853,
+                                        "question_id": 64,
+                                        "answer_id": 156,
+                                        "next_question_id": 65
+                                    },
+                                    {
+                                        "id": 2854,
+                                        "question_id": 64,
+                                        "answer_id": 157,
+                                        "next_question_id": 65
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 66,
+                                "keep": true,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "Indica tu otra fuente de ingresos",
+                                "order": 21,
+                                "page": 21,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 160, "content": "Soy pensionada", "order": 1 },
+                                    { "id": 161, "content": "Recibo remesas", "order": 2 },
+                                    { "id": 162, "content": "Otro", "order": 3 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2855,
+                                        "question_id": 65,
+                                        "answer_id": 158,
+                                        "next_question_id": 66
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 81,
+                                "keep": true,
+                                "show_conditions": true,
+                                "show": false,
+                                "content": "Por favor indique su otra fuente de ingresos",
+                                "order": 22,
+                                "page": 22,
+                                "type": "single_text",
+                                "required": true,
+                                "min": 4,
+                                "max": 255,
+                                "answers": [],
+                                "connections": [
+                                    {
+                                        "id": 2856,
+                                        "question_id": 66,
+                                        "answer_id": 162,
+                                        "next_question_id": 81
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 67,
+                                "keep": true,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "Indica el monto de tus ingresos totales",
+                                "order": 23,
+                                "page": 23,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 163, "content": "Menos de $250", "order": 1 },
+                                    { "id": 164, "content": "De $251 a $400", "order": 2 },
+                                    { "id": 165, "content": "De $401 a $500", "order": 3 },
+                                    { "id": 166, "content": "Más de $500 al mes", "order": 4 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2857,
+                                        "question_id": 66,
+                                        "answer_id": 160,
+                                        "next_question_id": 67
+                                    },
+                                    {
+                                        "id": 2858,
+                                        "question_id": 66,
+                                        "answer_id": 161,
+                                        "next_question_id": 67
+                                    },
+                                    {
+                                        "id": 2859,
+                                        "question_id": 66,
+                                        "answer_id": 162,
+                                        "next_question_id": 67
+                                    },
+                                    {
+                                        "id": 2860,
+                                        "question_id": 65,
+                                        "answer_id": 159,
+                                        "next_question_id": 67
+                                    },
+                                    {
+                                        "id": 2861,
+                                        "question_id": 63,
+                                        "answer_id": 150,
+                                        "next_question_id": 67
+                                    },
+                                    {
+                                        "id": 2862,
+                                        "question_id": 63,
+                                        "answer_id": 151,
+                                        "next_question_id": 67
+                                    },
+                                    {
+                                        "id": 2863,
+                                        "question_id": 64,
+                                        "answer_id": 156,
+                                        "next_question_id": 67
+                                    },
+                                    {
+                                        "id": 2864,
+                                        "question_id": 64,
+                                        "answer_id": 157,
+                                        "next_question_id": 67
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 68,
+                                "keep": false,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "¿Cuántas personas en tu hogar dependen de tus ingresos?",
+                                "order": 24,
+                                "page": 24,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 167, "content": "Solo soy yo", "order": 1 },
+                                    { "id": 168, "content": "1-2", "order": 2 },
+                                    { "id": 169, "content": "3-4", "order": 3 },
+                                    { "id": 170, "content": "4-5", "order": 4 },
+                                    { "id": 171, "content": "Más de 5", "order": 5 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2865,
+                                        "question_id": 67,
+                                        "answer_id": 163,
+                                        "next_question_id": 68
+                                    },
+                                    {
+                                        "id": 2866,
+                                        "question_id": 67,
+                                        "answer_id": 164,
+                                        "next_question_id": 68
+                                    },
+                                    {
+                                        "id": 2867,
+                                        "question_id": 67,
+                                        "answer_id": 165,
+                                        "next_question_id": 68
+                                    },
+                                    {
+                                        "id": 2868,
+                                        "question_id": 67,
+                                        "answer_id": 166,
+                                        "next_question_id": 68
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 69,
+                                "keep": false,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "¿Cuánto dinero gastaste los últimos 30 días?",
+                                "order": 25,
+                                "page": 25,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 172, "content": "Menos de $151", "order": 1 },
+                                    { "id": 173, "content": "Entre $151 a $200", "order": 2 },
+                                    { "id": 174, "content": "Entre $200 a $400", "order": 3 },
+                                    { "id": 175, "content": "Más de $400", "order": 4 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2869,
+                                        "question_id": 68,
+                                        "answer_id": 167,
+                                        "next_question_id": 69
+                                    },
+                                    {
+                                        "id": 2870,
+                                        "question_id": 68,
+                                        "answer_id": 168,
+                                        "next_question_id": 69
+                                    },
+                                    {
+                                        "id": 2871,
+                                        "question_id": 68,
+                                        "answer_id": 169,
+                                        "next_question_id": 69
+                                    },
+                                    {
+                                        "id": 2872,
+                                        "question_id": 68,
+                                        "answer_id": 170,
+                                        "next_question_id": 69
+                                    },
+                                    {
+                                        "id": 2873,
+                                        "question_id": 68,
+                                        "answer_id": 171,
+                                        "next_question_id": 69
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 70,
+                                "keep": true,
+                                "show_conditions": false,
+                                "show": true,
+                                "content": "¿En qué te gustaría utilizar tu préstamo?",
+                                "order": 26,
+                                "page": 26,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 176, "content": "Gastos de negocio", "order": 1 },
+                                    { "id": 177, "content": "Gastos personales", "order": 2 }
+                                ],
+                                "connections": [],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 71,
+                                "keep": true,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "¿Qué tipo de gasto de negocio?",
+                                "order": 27,
+                                "page": 27,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 178, "content": "Es negocio existente", "order": 1 },
+                                    { "id": 179, "content": "Es negocio nuevo", "order": 2 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2874,
+                                        "question_id": 70,
+                                        "answer_id": 176,
+                                        "next_question_id": 71
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 72,
+                                "keep": true,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "Indica el uso de tu préstamo",
+                                "order": 28,
+                                "page": 28,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 180, "content": "Compra de insumos", "order": 1 },
+                                    { "id": 181, "content": "Pago de deudas", "order": 2 },
+                                    { "id": 182, "content": "Otro", "order": 3 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2875,
+                                        "question_id": 71,
+                                        "answer_id": 178,
+                                        "next_question_id": 72
+                                    },
+                                    {
+                                        "id": 2876,
+                                        "question_id": 71,
+                                        "answer_id": 179,
+                                        "next_question_id": 72
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 82,
+                                "keep": false,
+                                "show_conditions": true,
+                                "show": false,
+                                "content": "Por favor indique su otro uso de préstamo",
+                                "order": 29,
+                                "page": 29,
+                                "type": "single_text",
+                                "required": true,
+                                "min": 4,
+                                "max": 255,
+                                "answers": [],
+                                "connections": [
+                                    {
+                                        "id": 2877,
+                                        "question_id": 72,
+                                        "answer_id": 182,
+                                        "next_question_id": 82
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 73,
+                                "keep": false,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "¿Qué tipo de gasto personal?",
+                                "order": 30,
+                                "page": 30,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 183, "content": "Una emergencia", "order": 1 },
+                                    { "id": 184, "content": "Gastos del hogar", "order": 2 },
+                                    { "id": 185, "content": "Pago de deuda", "order": 3 },
+                                    { "id": 186, "content": "Gastos escolares", "order": 4 },
+                                    { "id": 187, "content": "Gastos médicos", "order": 5 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2878,
+                                        "question_id": 70,
+                                        "answer_id": 177,
+                                        "next_question_id": 73
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 74,
+                                "keep": true,
+                                "show_conditions": false,
+                                "show": true,
+                                "content": "En la actualidad, ¿le debes dinero a alguna institución o a otra persona?",
+                                "order": 31,
+                                "page": 31,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 188, "content": "Si", "order": 1 },
+                                    { "id": 189, "content": "No", "order": 2 }
+                                ],
+                                "connections": [],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 75,
+                                "keep": false,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "¿Cuál es el monto de esa deuda?",
+                                "order": 32,
+                                "page": 32,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 190, "content": "Menor a $50", "order": 1 },
+                                    { "id": 191, "content": "De $50 a $100", "order": 2 },
+                                    { "id": 192, "content": "Más de $100", "order": 3 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2879,
+                                        "question_id": 74,
+                                        "answer_id": 188,
+                                        "next_question_id": 75
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 76,
+                                "keep": true,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "¿Has tenido algún préstamo en el pasado?",
+                                "order": 33,
+                                "page": 33,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 193, "content": "Si", "order": 1 },
+                                    { "id": 194, "content": "No", "order": 2 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2880,
+                                        "question_id": 74,
+                                        "answer_id": 189,
+                                        "next_question_id": 76
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 77,
+                                "keep": true,
+                                "show_conditions": true,
+                                "show": true,
+                                "content": "¿Cuál fue el monto de esa deuda?",
+                                "order": 34,
+                                "page": 34,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 195, "content": "Menor a $50", "order": 1 },
+                                    { "id": 196, "content": "De $50 a $100", "order": 2 },
+                                    { "id": 197, "content": "Más de $100", "order": 3 }
+                                ],
+                                "connections": [
+                                    {
+                                        "id": 2881,
+                                        "question_id": 76,
+                                        "answer_id": 193,
+                                        "next_question_id": 77
+                                    }
+                                ],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 78,
+                                "keep": true,
+                                "show_conditions": false,
+                                "show": true,
+                                "content": "¿Estás dispuesto a pagar tus cuotas a tiempo?",
+                                "order": 35,
+                                "page": 35,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 198, "content": "No", "order": 1 },
+                                    { "id": 199, "content": "Si", "order": 2 }
+                                ],
+                                "connections": [],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 88,
+                                "keep": true,
+                                "show_conditions": false,
+                                "show": false,
+                                "content": "Ingresa un número de contacto para llamarte a validar tus datos",
+                                "order": 36,
+                                "page": 36,
+                                "type": "phone",
+                                "required": true,
+                                "min": null,
+                                "max": null,
+                                "answers": [],
+                                "connections": [],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 89,
+                                "keep": true,
+                                "show_conditions": false,
+                                "show": false,
+                                "content": "Ingresa un contacto de referencia en caso no podamos contactarte",
+                                "order": 37,
+                                "page": 37,
+                                "type": "phone",
+                                "required": true,
+                                "min": null,
+                                "max": null,
+                                "answers": [],
+                                "connections": [],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 90,
+                                "keep": true,
+                                "show_conditions": false,
+                                "show": false,
+                                "content": "Escribe el nombre de tu contacto de referencia",
+                                "order": 38,
+                                "page": 38,
+                                "type": "single_text",
+                                "required": true,
+                                "min": 4,
+                                "max": 255,
+                                "answers": [],
+                                "connections": [],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 91,
+                                "keep": true,
+                                "show_conditions": false,
+                                "show": true,
+                                "content": "Selecciona el parentesco de tu contacto de referencia",
+                                "order": 39,
+                                "page": 39,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 204, "content": "Hermano/a", "order": 1 },
+                                    { "id": 205, "content": "Padre/Madre", "order": 2 },
+                                    { "id": 206, "content": "Amigo", "order": 3 },
+                                    { "id": 207, "content": "Cónyuge", "order": 4 },
+                                    { "id": 208, "content": "Otro", "order": 5 }
+                                ],
+                                "connections": [],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 92,
+                                "keep": true,
+                                "show_conditions": false,
+                                "show": true,
+                                "content": "¿Es tuyo este teléfono desde el cual te estás registrando?",
+                                "order": 40,
+                                "page": 40,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 209, "content": "Si", "order": 1 },
+                                    { "id": 210, "content": "No", "order": 2 }
+                                ],
+                                "connections": [],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 93,
+                                "keep": false,
+                                "show_conditions": false,
+                                "show": true,
+                                "content": "¿Cuánto tiempo llevas usando este teléfono?",
+                                "order": 41,
+                                "page": 41,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 211, "content": "Más de 12 meses", "order": 1 },
+                                    { "id": 212, "content": "6 - 12 meses", "order": 2 },
+                                    { "id": 213, "content": "1 - 6 meses", "order": 3 },
+                                    { "id": 214, "content": "Menos de 1 mes", "order": 4 }
+                                ],
+                                "connections": [],
+                                "info_type": 2
+                            },
+                            {
+                                "id": 94,
+                                "keep": true,
+                                "show_conditions": false,
+                                "show": true,
+                                "content": "¿Cómo conociste DiiMO?",
+                                "order": 42,
+                                "page": 42,
+                                "type": "selection",
+                                "required": true,
+                                "min": 1,
+                                "max": 1,
+                                "answers": [
+                                    { "id": 215, "content": "Amigos", "order": 1 },
+                                    { "id": 216, "content": "Google Play Store", "order": 2 },
+                                    { "id": 217, "content": "Facebook", "order": 3 },
+                                    { "id": 218, "content": "Instagram", "order": 4 },
+                                    { "id": 219, "content": "Otros", "order": 5 }
+                                ],
+                                "connections": [],
+                                "info_type": 2
+                            }
+                        ]
+                    }
+                ],
+            }
+        },
+        beforeMount() {
+        },
+        computed: {},
+        methods: {
+            showAnswers(index, q_index, flag) {
+                let questionnaires = this.cloneItem(this.questionnaires);
+                questionnaires[index].questions[q_index].show = !flag;
+                this.questionnaires = questionnaires;
+            },
+
+            showConditions(index, q_index, flag) {
+                let questionnaires = this.cloneItem(this.questionnaires);
+                questionnaires[index].questions[q_index].show_conditions = !flag;
+                this.questionnaires = questionnaires;
+            },
+
+            cloneItem(obj) {
+                return JSON.parse(JSON.stringify(obj));
+            },
+
+            saveFile() {
+                const data = JSON.stringify(this.questionnaires);
+                const blob = new Blob([data], { type: 'text/plain' })
+                const e = document.createEvent('MouseEvents'),
+                    a = document.createElement('a');
+                a.download = "cuestionarioV2_keep.json";
+                a.href = window.URL.createObjectURL(blob);
+                a.dataset.downloadurl = ['text/json', a.download, a.href].join(':');
+                e.initEvent('click', true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+                a.dispatchEvent(e);
+            },
+
+            getQuestionNumber(id) {
+                let index = this.questionnaires[0].questions.findIndex(
+                    question => question.id === id
+                );
+                return index;
+            },
+
+            getAnswer(question_id, answer_id) {
+                if (!this.questionnaires[0].questions[
+                    this.getQuestionNumber(question_id)
+                ]) {
+                    return null;
+                }
+                return this.questionnaires[0].questions[
+                    this.getQuestionNumber(question_id)
+                ].answers.find(answer => answer.id === answer_id).content;
+            }
+        }
+    });
+</script>
+
+</html>
